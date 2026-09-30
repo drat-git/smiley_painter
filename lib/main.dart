@@ -2,6 +2,8 @@
 // Student: Darsh Rathi
 // Date: September 30, 2026
 
+import 'dart:math' show pi;
+
 import 'package:flutter/material.dart';
 
 void main() => runApp(const SmileyApp());
@@ -90,6 +92,39 @@ class SmileyPainter extends CustomPainter {
       ..strokeWidth = 4;
 
     canvas.drawCircle(center, radius, border);
+
+    // Draw two eyes using matching offsets from the center.
+    final eyePaint = Paint()
+      ..color = Colors.black87
+      ..style = PaintingStyle.fill;
+    final eyeRadius = radius * 0.09;
+    final eyeY = center.dy - radius * 0.25;
+    final eyeDistance = radius * 0.35;
+
+    canvas.drawCircle(
+      Offset(center.dx - eyeDistance, eyeY),
+      eyeRadius,
+      eyePaint,
+    );
+    canvas.drawCircle(
+      Offset(center.dx + eyeDistance, eyeY),
+      eyeRadius,
+      eyePaint,
+    );
+
+    // drawArc creates the curved smile inside a size-based rectangle.
+    final mouthPaint = Paint()
+      ..color = Colors.black87
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    final mouthRect = Rect.fromCenter(
+      center: Offset(center.dx, center.dy + radius * 0.12),
+      width: radius,
+      height: radius * 0.75,
+    );
+
+    canvas.drawArc(mouthRect, 0.15 * pi, 0.70 * pi, false, mouthPaint);
   }
 
   @override
