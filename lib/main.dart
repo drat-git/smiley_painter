@@ -10,6 +10,24 @@ void main() => runApp(const SmileyApp());
 
 enum FaceType { classic, sleepy, surprised }
 
+class FaceConfig {
+  const FaceConfig({
+    required this.mood,
+    required this.faceType,
+    required this.faceColor,
+    required this.showHat,
+    required this.showGlasses,
+    required this.showMustache,
+  });
+
+  final double mood;
+  final FaceType faceType;
+  final Color faceColor;
+  final bool showHat;
+  final bool showGlasses;
+  final bool showMustache;
+}
+
 class SmileyApp extends StatelessWidget {
   const SmileyApp({super.key});
 
@@ -37,6 +55,10 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
   FaceType selectedFace = FaceType.classic;
   Color faceColor = Colors.orange.shade400;
   final Random random = Random();
+  bool showHat = false;
+  bool showGlasses = false;
+  bool showMustache = false;
+  final List<FaceConfig> history = [];
 
   String _faceName(FaceType faceType) {
     if (faceType == FaceType.sleepy) return 'Sleepy';
@@ -56,10 +78,24 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _saveCurrentConfig() {
+    history.add(
+      FaceConfig(
+        mood: mood,
+        faceType: selectedFace,
+        faceColor: faceColor,
+        showHat: showHat,
+        showGlasses: showGlasses,
+        showMustache: showMustache,
+      ),
+    );
+  }
+
   void _cycleFace() {
     final currentIndex = FaceType.values.indexOf(selectedFace);
     final nextIndex = (currentIndex + 1) % FaceType.values.length;
 
+    _saveCurrentConfig();
     setState(() {
       selectedFace = FaceType.values[nextIndex];
     });
@@ -75,6 +111,7 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
       Colors.amber.shade400,
     ];
 
+    _saveCurrentConfig();
     setState(() {
       mood = random.nextDouble();
       faceColor = colors[random.nextInt(colors.length)];
@@ -83,6 +120,46 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
     _showMessage(
       'Randomized mood to ${mood.toStringAsFixed(2)} and changed the color.',
     );
+  }
+
+  void _toggleHat() {
+    _saveCurrentConfig();
+    setState(() {
+      showHat = !showHat;
+    });
+  }
+
+  void _toggleGlasses() {
+    _saveCurrentConfig();
+    setState(() {
+      showGlasses = !showGlasses;
+    });
+  }
+
+  void _toggleMustache() {
+    _saveCurrentConfig();
+    setState(() {
+      showMustache = !showMustache;
+    });
+  }
+
+  void _undo() {
+    if (history.isEmpty) {
+      _showMessage('There is no earlier face to restore.');
+      return;
+    }
+
+    final previous = history.removeLast();
+    setState(() {
+      mood = previous.mood;
+      selectedFace = previous.faceType;
+      faceColor = previous.faceColor;
+      showHat = previous.showHat;
+      showGlasses = previous.showGlasses;
+      showMustache = previous.showMustache;
+    });
+
+    _showMessage('Restored the previous face.');
   }
 
   @override
@@ -106,6 +183,9 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
                       mood: mood,
                       faceType: selectedFace,
                       faceColor: faceColor,
+                      showHat: showHat,
+                      showGlasses: showGlasses,
+                      showMustache: showMustache,
                     ),
                   ),
                 ),
@@ -114,6 +194,9 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
             Text('Mood: ${mood.toStringAsFixed(2)}'),
             Slider(
               value: mood,
+              onChangeStart: (double value) {
+                _saveCurrentConfig();
+              },
               onChanged: (double value) {
                 setState(() {
                   mood = value;
@@ -135,7 +218,8 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
                     );
                   }).toList(),
                   onChanged: (FaceType? newFace) {
-                    if (newFace == null) return;
+                    if (newFace == null || newFace == selectedFace) return;
+                    _saveCurrentConfig();
                     setState(() {
                       selectedFace = newFace;
                     });
@@ -143,6 +227,41 @@ class _DrawingPlaygroundState extends State<DrawingPlayground> {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            const Text('Accessories'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  key: const Key('hatButton'),
+                  tooltip: 'Hat',
+                  onPressed: _toggleHat,
+                  color: showHat ? Colors.indigo : null,
+                  icon: const Icon(Icons.checkroom),
+                ),
+                IconButton(
+                  key: const Key('glassesButton'),
+                  tooltip: 'Glasses',
+                  onPressed: _toggleGlasses,
+                  color: showGlasses ? Colors.indigo : null,
+                  icon: const Icon(Icons.visibility),
+                ),
+                IconButton(
+                  key: const Key('mustacheButton'),
+                  tooltip: 'Mustache',
+                  onPressed: _toggleMustache,
+                  color: showMustache ? Colors.indigo : null,
+                  icon: const Icon(Icons.face),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('undoButton'),
+                  onPressed: _undo,
+                  icon: const Icon(Icons.undo),
+                  label: const Text('Undo'),
+                ),
+              ],
+            ),
+            Text('Undo steps: ${history.length}'),
           ],
         ),
       ),
@@ -155,11 +274,17 @@ class SmileyPainter extends CustomPainter {
     required this.mood,
     required this.faceColor,
     this.faceType = FaceType.classic,
+    this.showHat = false,
+    this.showGlasses = false,
+    this.showMustache = false,
   });
 
   final double mood;
   final Color faceColor;
   final FaceType faceType;
+  final bool showHat;
+  final bool showGlasses;
+  final bool showMustache;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -274,12 +399,76 @@ class SmileyPainter extends CustomPainter {
       );
       canvas.drawArc(bigSmileRect, 0.15 * pi, 0.70 * pi, false, mouthPaint);
     }
+
+    // Accessories are painted last so they stay on top of the face.
+    if (showHat) {
+      final hatPaint = Paint()..color = Colors.indigo.shade700;
+      final hatCrown = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(center.dx, center.dy - radius * 0.92),
+          width: radius * 0.9,
+          height: radius * 0.45,
+        ),
+        const Radius.circular(12),
+      );
+      canvas.drawRRect(hatCrown, hatPaint);
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(center.dx, center.dy - radius * 0.72),
+          width: radius * 1.35,
+          height: radius * 0.12,
+        ),
+        hatPaint,
+      );
+    }
+
+    if (showGlasses) {
+      final glassesPaint = Paint()
+        ..color = Colors.black87
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4;
+      final glassesRadius = radius * 0.22;
+      canvas.drawCircle(leftEye, glassesRadius, glassesPaint);
+      canvas.drawCircle(rightEye, glassesRadius, glassesPaint);
+      canvas.drawLine(
+        Offset(leftEye.dx + glassesRadius, eyeY),
+        Offset(rightEye.dx - glassesRadius, eyeY),
+        glassesPaint,
+      );
+    }
+
+    if (showMustache) {
+      final mustachePaint = Paint()
+        ..color = Colors.brown.shade800
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 7
+        ..strokeCap = StrokeCap.round;
+      final mustache = Path()
+        ..moveTo(center.dx, center.dy + radius * 0.22)
+        ..quadraticBezierTo(
+          center.dx - radius * 0.16,
+          center.dy + radius * 0.1,
+          center.dx - radius * 0.38,
+          center.dy + radius * 0.24,
+        )
+        ..moveTo(center.dx, center.dy + radius * 0.22)
+        ..quadraticBezierTo(
+          center.dx + radius * 0.16,
+          center.dy + radius * 0.1,
+          center.dx + radius * 0.38,
+          center.dy + radius * 0.24,
+        );
+      canvas.drawPath(mustache, mustachePaint);
+    }
   }
 
   @override
   bool shouldRepaint(covariant SmileyPainter oldDelegate) {
     return oldDelegate.mood != mood ||
         oldDelegate.faceType != faceType ||
-        oldDelegate.faceColor != faceColor;
+        oldDelegate.faceColor != faceColor ||
+        oldDelegate.showHat != showHat ||
+        oldDelegate.showGlasses != showGlasses ||
+        oldDelegate.showMustache != showMustache;
   }
 }
