@@ -11,4 +11,11 @@ void main() {
     expect(find.text('Mood: 0.80'), findsOneWidget);
     expect(find.byType(DrawingPlayground), findsOneWidget);
   });
+
+  test('painter repaints only when the mood changes', () {
+    final oldPainter = SmileyPainter(mood: 0.5);
+
+    expect(SmileyPainter(mood: 0.8).shouldRepaint(oldPainter), isTrue);
+    expect(SmileyPainter(mood: 0.5).shouldRepaint(oldPainter), isFalse);
+  });
 }

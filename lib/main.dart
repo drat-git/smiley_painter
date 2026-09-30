@@ -80,8 +80,17 @@ class SmileyPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.shortestSide * 0.4;
 
+    Color faceColor;
+    if (mood < 0.35) {
+      faceColor = Colors.lightBlue.shade300;
+    } else if (mood <= 0.7) {
+      faceColor = Colors.yellow.shade600;
+    } else {
+      faceColor = Colors.orange.shade400;
+    }
+
     final facePaint = Paint()
-      ..color = Colors.yellow.shade600
+      ..color = faceColor
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(center, radius, facePaint);
@@ -112,19 +121,35 @@ class SmileyPainter extends CustomPainter {
       eyePaint,
     );
 
-    // drawArc creates the curved smile inside a size-based rectangle.
+    // The mood changes the mouth size and direction.
     final mouthPaint = Paint()
       ..color = Colors.black87
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
-    final mouthRect = Rect.fromCenter(
-      center: Offset(center.dx, center.dy + radius * 0.12),
-      width: radius,
-      height: radius * 0.75,
-    );
 
-    canvas.drawArc(mouthRect, 0.15 * pi, 0.70 * pi, false, mouthPaint);
+    if (mood < 0.35) {
+      final frownRect = Rect.fromCenter(
+        center: Offset(center.dx, center.dy + radius * 0.38),
+        width: radius * 0.9,
+        height: radius * 0.55,
+      );
+      canvas.drawArc(frownRect, 1.15 * pi, 0.70 * pi, false, mouthPaint);
+    } else if (mood <= 0.7) {
+      final softSmileRect = Rect.fromCenter(
+        center: Offset(center.dx, center.dy + radius * 0.16),
+        width: radius * 0.85,
+        height: radius * 0.45,
+      );
+      canvas.drawArc(softSmileRect, 0.18 * pi, 0.64 * pi, false, mouthPaint);
+    } else {
+      final bigSmileRect = Rect.fromCenter(
+        center: Offset(center.dx, center.dy + radius * 0.1),
+        width: radius * 1.05,
+        height: radius * (0.55 + mood * 0.25),
+      );
+      canvas.drawArc(bigSmileRect, 0.15 * pi, 0.70 * pi, false, mouthPaint);
+    }
   }
 
   @override
